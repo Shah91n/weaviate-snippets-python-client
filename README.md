@@ -21,12 +21,10 @@ Prepare text data for vectorization:
 - `Recursive_chunk.py` - Recursive text chunking for optimal embedding windows
 
 ### 📚 **General Scripts** (`General_Scripts/`)
-Essential utilities for schema management and database operations:
-- `CreateCollectionViaBatchingFromFile.py` - Efficient bulk collection creation from file sources
-- `DumpSchemaFromSourceEndpointStepOne.py` - Export schema from a Weaviate instance (Step 1 of replication)
-- `DumpSchemaToNewEndpointStepTwo.py` - Import schema to a target Weaviate instance (Step 2 of replication)
-- `Health_Checks.ipynb` - Monitor cluster health and connectivity
-- `Read_Repair_Consistency.ipynb` - Trigger read repair operations for consistency
+Utilities for data import and cluster checks (each connects to any Weaviate: open source, DigitalOcean, Weaviate Cloud, ...):
+- `CreateCollectionViaBatchingFromFile.py` - Create an OpenAI-vectorized collection and import a CSV file with batching
+- `Health_Checks.ipynb` - Check collection count, replication settings, multi-tenancy candidates and compression
+- `Read_Repair_Consistency.ipynb` - Read every object with consistency ALL to repair out-of-date replicas
 
 ### 🚀 **Weaviate Operations** (`Weaviate_Operations/`)
 
