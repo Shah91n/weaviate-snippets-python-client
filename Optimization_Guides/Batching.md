@@ -1,48 +1,72 @@
 # 🚀 Batching Optimization Guide
 
-Production-focused checklist for ingesting **5M–100M** objects. Assumes a **3+ node** cluster.
+This guide provides a production optimization for batching objects from 5 million to 100 million objects, using **server-side batching**.
+
+---
 
 ## 1. Optimization Checklist
-- Connectivity: Prefer **gRPC (50051)**; REST is a bottleneck at this scale.
-- Sharding: Set `desired_count` up-front (e.g., **6 shards on 3 nodes**) to parallelize CPUs and allow future node growth without re-import.
-- Quantization: Enable **rotational quantization (RQ)** to cut RAM, costs, and improve query throughput.
-- Batch mode: Use `collection.batch.fixed_size()` for high-volume imports.
-- Vectors: **Pre-compute vectors** to avoid embedding latency during the import loop.
-- Error handling: After the batch context closes, inspect `collection.batch.failed_objects` to capture per-object failures.
 
-## 2. Infrastructure
-- **Over-sharding:** 6 shards on 3 nodes = better CPU saturation now, zero-migration expansion to 6 nodes later.
-- **Multi-tenancy:** In MT, **1 tenant = 1 shard**; Weaviate auto-distributes shards. You typically **do not** set `desired_count` manually for MT.
+- [ ] Connectivity: Ensure gRPC (Port 50051) is enabled. Server-side batching runs over a gRPC stream; REST is a bottleneck for massive datasets.
+- [ ] Batch Mode: Use **server-side batching** (`.stream()`). The server controls the batch size and slows the client down when it is under memory pressure.
+- [ ] GOMEMLIMIT: Make sure it is set (or `LIMIT_RESOURCES=true`). Server-side batching uses it to apply backpressure.
+- [ ] Error Handling: Always retrieve `collection.batch.failed_objects` after the batch context closes to capture individual object failures.
 
-## 3. Decision Tree — “Is Import Taking Too Long?”
-- **Weaviate CPU > 80%:** Cluster is saturated → **Scale up**.
-- **Embedding is slow:** External API wait → raise `concurrent_requests`, use `.rate_limit()`, or **pre-compute vectors**.
-- **Network latency high:** Increase `concurrent_requests` to keep gRPC pipeline full.
-- **Weaviate CPU < 50%:** Raise `concurrent_requests` (6 → 8 → 12). If still slow, raise `batch_size` (up to ~500–1000).
+---
 
-## 4. Recommended Batch Template
+## 2. How Server-Side Batching Works
+
+- The client opens a gRPC stream and sends objects; the **server decides the batch size** (100–1000, adjusted so each batch takes about 1 second to process) and tells the client to adjust it.
+- When the server's heap reaches 50% of `GOMEMLIMIT`, it starts delaying acknowledgements (slowing the client down).
+- At 90% it stops accepting new objects. The client re-queues them and waits up to 10 minutes for memory to free up; if it doesn't, the batch fails with an error.
+
+---
+
+## 3. Decision Tree: "Is Import Taking Too Long?"
+
+Use this logic to isolate and solve ingestion bottlenecks. Determine if the delay is in Embedding or Indexing.
+
+- Scenario A: Weaviate CPU is Saturated
+    - *Cause:* The cluster is maxed out on indexing/compression tasks.
+    - *Solution:* **Scale up**
+- Scenario B: Embedding Time is the Bottleneck
+    - *Cause:* Waiting on external API providers (e.g., OpenAI/Cohere).
+    - *Solution:* Switch to a **pre-computed vector pipeline**, or switch to `.rate_limit()` to stay under the provider's limits.
+- Scenario C: Import Is Being Throttled by the Server
+    - *Cause:* Heap is above 50% of `GOMEMLIMIT`, so the server delays acknowledgements and slows the stream down.
+    - *Solution:* Add memory, enable compression, or scale out.
+
+---
+
+## 4. Recommended Batch Snippet Template
+
+This ensures that errors are captured correctly after the batch is fully flushed.
+
 ```python
 try:
-    with collection.batch.fixed_size(batch_size=500, concurrent_requests=4) as batch:
+    with collection.batch.stream() as batch:
         for row in data_generator:
             batch.add_object(
                 properties=row["props"],
-                vector=row["vector"],
+                vector=row["vector"]
             )
 
-    failed = collection.batch.failed_objects
-    if failed:
-        print(f"Failed count: {len(failed)}")
-        for i, err in enumerate(failed[:5], 1):
-            print(f"Error {i}: {err.message}")
+    # Failure Retrieval
+    failed_objs = collection.batch.failed_objects
+    if failed_objs:
+        print(f"Failed count: {len(failed_objs)}")
+        for i, failed in enumerate(failed_objs[:5], 1):
+            print(f"Error {i}: {failed.message}")
+
 except Exception as e:
     print(f"Critical System Error: {e}")
 ```
 
-## 5. Troubleshooting Cheat Sheet
-| Situation | Diagnosis | Fix |
+---
+
+## 5. Troubleshooting "X" vs "Y" Situations
+
+| **Situation** | **Diagnosis** | **Fix** |
 | --- | --- | --- |
-| Deadline exceeded (gRPC) | Batch payload too heavy | Lower `batch_size` (try 50) |
-| OOM / memory errors | Indexing exceeds RAM | Lower `batch_size`; ensure **RQ compression** enabled |
-| Integration model errors | Hitting API rate limits | Use `collection.batch.rate_limit(rpm=X)` |
-| Slow + low CPU | Client/network bottleneck | Increase `concurrent_requests` (8–12) |
+| **Import slows down over time** | Server is applying backpressure (heap above 50% of `GOMEMLIMIT`). | Add memory, enable **Compression**, or scale out. |
+| **Memory Errors (OOM)** | `GOMEMLIMIT` is not set, so the server cannot apply backpressure. | Set `GOMEMLIMIT` (or `LIMIT_RESOURCES=true`) and ensure **Compression** is enabled. |
+| **Integration Model Errors** | Hitting OpenAI/API Rate Limits. | Switch to `collection.batch.rate_limit(requests_per_minute=X)`, where X is objects per minute. |

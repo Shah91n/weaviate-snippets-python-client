@@ -8,12 +8,13 @@ A comprehensive collection of production-ready code snippets, scripts, and optim
 Establish and manage connections to Weaviate instances:
 - `Connection_Methods.ipynb` - Multiple ways to connect to Weaviate
 - `Connection_Tests_Script.ipynb` - Test and validate your connections
-- `Weaviate_Connection_Manager_Singleton_Pattern.py` - Production-ready connection pooling with singleton pattern
+- `Weaviate_Connection_Manager_Singleton_Pattern.py` - Singleton manager for one long-lived sync/async client per application
 
 ### 📋 **Migration Scripts** (`Migration_Scripts/`)
-Migrate data and collections between Weaviate instances:
-- `collections_to_tenants_migration.ipynb` - Migrate multiple collections to a multi-tenant architecture
-- `general_migration.ipynb` - General-purpose migration workflows
+Migrate data and collections between Weaviate instances (open source, DigitalOcean, Weaviate Cloud, ...). Each one is a command-line script (`.py`) with a matching notebook (`.ipynb`); see [`Migration_Scripts/README.md`](Migration_Scripts/README.md) for usage:
+- `general_migration` - Copy all or selected collections (schema, objects, vectors, tenants) to another instance
+- `collections_to_tenants_migration` - Merge same-schema collections into one multi-tenant collection
+- `tenants_to_collections_migration` - Split multi-tenant collections into one collection per tenant
 
 ### ✂️ **Chunking Scripts** (`Chunking_Scripts/`)
 Prepare text data for vectorization:
@@ -38,7 +39,7 @@ Located in `CRUD/` subdirectory with complete examples:
 - `general_queries.ipynb` - General query patterns
 
 #### Search & Retrieval
-Multiple search strategies with working examples:
+Also located in `CRUD/`, multiple search strategies with working examples:
 - `vector_search.ipynb` - Pure vector/semantic search
 - `keywords_search.ipynb` - BM25 keyword search
 - `hybrid_search.ipynb` - Combined vector + keyword search
@@ -55,10 +56,13 @@ Production-ready implementations of Weaviate's advanced capabilities:
 - `RESTAPIs.ipynb` - Direct REST API examples
 - `RoleBasedAccessControl.ipynb` - RBAC implementation and authorization
 - `Shards.ipynb` - Shard management and configuration
-- `Batching.ipynb` - High-performance batch ingestion patterns
-- `Cluster.ipynb` - Multi-node cluster operations
-- `Multi_Tenancy.ipynb` - Multi-tenant architecture and operations
-- `Named_Vectors.ipynb` - Named vector fields and multi-vector storage
+- `batching.ipynb` - High-performance batch ingestion patterns
+- `cluster.ipynb` - Multi-node cluster operations
+- `multi_tenancy.ipynb` - Multi-tenant architecture and operations
+- `named_vectors.ipynb` - Named vector fields and multi-vector storage
+
+### 🧠 **Other** (repository root)
+- `Engram.ipynb` - Getting started with the Engram memory client (`weaviate-engram`)
 
 ## 📚 Optimization Guides
 
