@@ -15,7 +15,8 @@ pip install -U weaviate-client
 export SOURCE_WEAVIATE_API_KEY=...   # omit for anonymous access
 export TARGET_WEAVIATE_API_KEY=...
 
-# Local open-source Weaviate -> remote Weaviate
+# Any Weaviate -> any Weaviate (local, DigitalOcean, Weaviate Cloud, ...)
+# Example: local open-source Weaviate -> remote Weaviate with an API key
 python general_migration.py \
   --source-host localhost \
   --target-host weaviate.example.com --target-secure --target-http-port 443 --target-grpc-port 443

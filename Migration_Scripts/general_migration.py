@@ -9,7 +9,9 @@ re-inserted with their original UUIDs and vectors, so nothing is re-vectorized.
 Install:
     pip install -U weaviate-client
 
-Usage (local open-source Weaviate -> remote Weaviate with an API key):
+Source and target can be any Weaviate (local, DigitalOcean, Weaviate Cloud, ...).
+
+Usage, e.g. local open-source Weaviate -> remote Weaviate with an API key:
     export TARGET_WEAVIATE_API_KEY=...
     python general_migration.py \
         --source-host localhost \
